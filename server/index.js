@@ -6,18 +6,32 @@ import admin from "firebase-admin";
 
 // ─── Firebase Admin init ───────────────────────────────────────────────────
 let serviceAccount;
-try {
-  const envKey = process.env.FIREBASE_SERVICE_ACCOUNT;
-  serviceAccount = typeof envKey === 'string' ? JSON.parse(envKey) : envKey;
 
-  // Extra safety: Render often messes up newlines in the private_key PEM string
-  if (serviceAccount && serviceAccount.private_key) {
-    serviceAccount.private_key = serviceAccount.private_key
-      .replace(/\\n/g, '\n')     // Replace literal \n strings
-      .replace(/\n\n+/g, '\n');  // Remove accidental double newlines
+if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
+  // Option A: Individual environment variables (most stable for Render)
+  serviceAccount = {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+  };
+} else {
+  // Option B: Fallback to full JSON blob
+  try {
+    const envKey = process.env.FIREBASE_SERVICE_ACCOUNT;
+    serviceAccount = typeof envKey === 'string' ? JSON.parse(envKey) : envKey;
+    if (serviceAccount && serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key
+        .replace(/\\n/g, '\n')
+        .replace(/\n\n+/g, '\n');
+    }
+  } catch (e) {
+    console.error("❌ CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT env var.");
+    process.exit(1);
   }
-} catch (e) {
-  console.error("❌ CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT env var.");
+}
+
+if (!serviceAccount) {
+  console.error("❌ CRITICAL: No Firebase credentials provided.");
   process.exit(1);
 }
 

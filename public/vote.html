@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vote — NACOS OAU Award Night</title>
+<link rel="stylesheet" href="theme.css" />
+<style>
+/* ── Auth Gate ── */
+.gate {
+  min-height: 75vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px 24px;
+  background: radial-gradient(ellipse 70% 50% at 50% 0%, hsl(var(--mint)), transparent);
+}
+.gate-card {
+  background: hsl(var(--card)); border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) + 10px);
+  padding: 40px 36px; max-width: 420px; width: 100%;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.06); text-align: center;
+}
+.gate-logo { margin: 0 auto 24px; width: 48px; height: 48px; border-radius: 14px;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-dark)));
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-family: var(--font-display); font-weight: 800; font-size: 1rem;
+}
+.gate-card h1 { font-size: 1.65rem; margin-bottom: 10px; }
+.gate-card p  { color: hsl(var(--muted-foreground)); font-size: 0.92rem; margin-bottom: 28px; line-height: 1.6; }
+.google-btn {
+  width: 100%; padding: 13px; border-radius: var(--radius);
+  border: 1.5px solid hsl(var(--border)); background: white; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  font-size: 0.95rem; font-weight: 600; font-family: var(--font-sans);
+  color: hsl(var(--foreground)); transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.google-btn:hover:not(:disabled) {
+  border-color: hsl(var(--primary) / 0.5);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1); transform: translateY(-1px);
+}
+.google-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.google-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+.gate-note { margin-top: 16px; font-size: 0.78rem; color: hsl(var(--muted-foreground)); }
+.gate-error {
+  margin-top: 14px; padding: 10px 14px; border-radius: var(--radius);
+  background: hsl(var(--destructive) / 0.08); color: hsl(var(--destructive));
+  font-size: 0.85rem; display: none; text-align: left;
+}
+
+/* ── Loading ── */
+.loading-screen {
+  min-height: 60vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+  color: hsl(var(--muted-foreground));
+}
+.spinner {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 3px solid hsl(var(--border)); border-top-color: hsl(var(--primary));
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── User bar ── */
+.user-bar { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: hsl(var(--muted-foreground)); }
+.user-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: hsl(var(--primary) / 0.15); color: hsl(var(--primary));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+}
+.user-email { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Voting header ── */
+.voting-header { padding: 40px 24px 0; border-bottom: 1px solid hsl(var(--border)); }
+.voting-header-inner { max-width: 1100px; margin: 0 auto; padding-bottom: 28px; }
+.voting-header h1 { font-size: clamp(1.5rem, 3.5vw, 2.1rem); margin-bottom: 6px; }
+.voting-header p  { color: hsl(var(--muted-foreground)); font-size: 0.9rem; }
+.progress-row { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+.progress-chip {
+  padding: 5px 14px; border-radius: 999px; font-size: 0.78rem; font-weight: 600;
+  border: 1.5px solid hsl(var(--border)); color: hsl(var(--muted-foreground));
+  display: flex; align-items: center; gap: 6px; transition: all 0.2s ease;
+}
+.progress-chip.done { background: hsl(var(--success) / 0.1); color: hsl(var(--success)); border-color: hsl(var(--success) / 0.3); }
+
+/* ── Category sections ── */
+.voting-body { padding: 36px 24px 100px; }
+.cat-section { max-width: 1100px; margin: 0 auto 56px; }
+.cat-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; flex-wrap: wrap; gap: 10px; }
+.cat-title { display: flex; align-items: center; gap: 10px; }
+.cat-icon-badge {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: hsl(var(--primary) / 0.1);
+  display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+}
+.cat-title h2 { font-size: 1.25rem; }
+
+/* ── Nominee cards ── */
+.nominee-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.nominee-card {
+  background: hsl(var(--card)); border: 1.5px solid hsl(var(--border));
+  border-radius: calc(var(--radius) + 6px); overflow: hidden;
+  cursor: pointer; transition: all 0.18s ease;
+  text-align: left; padding: 0; display: flex; flex-direction: column; position: relative;
+}
+.nominee-card:hover:not(:disabled) {
+  border-color: hsl(var(--primary)); transform: translateY(-3px);
+  box-shadow: 0 6px 20px hsl(var(--primary) / 0.12);
+}
+.nominee-card:disabled { cursor: not-allowed; }
+.nominee-card img { width: 100%; aspect-ratio: 1; object-fit: cover; background: hsl(var(--muted)); border-bottom: 1px solid hsl(var(--border)); }
+.nominee-info { padding: 14px 14px 16px; }
+.nominee-name { font-weight: 700; font-size: 0.95rem; color: hsl(var(--foreground)); }
+.nominee-tap  { font-size: 0.78rem; color: hsl(var(--muted-foreground)); margin-top: 4px; }
+.voted-banner {
+  display: none; position: absolute; top: 10px; right: 10px;
+  background: hsl(var(--success)); color: white;
+  font-size: 0.7rem; font-weight: 700; padding: 3px 10px;
+  border-radius: 999px; letter-spacing: 0.03em;
+}
+.nominee-card.voted-for { border-color: hsl(var(--success)); box-shadow: 0 0 0 1px hsl(var(--success) / 0.4); }
+.nominee-card.voted-for .voted-banner { display: block; }
+.nominee-card.voted-for .nominee-tap  { color: hsl(var(--success)); font-weight: 600; }
+.nominee-card.other-voted { opacity: 0.4; }
+
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(4px); display: none; align-items: center;
+  justify-content: center; padding: 20px; z-index: 200;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: hsl(var(--card)); border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) + 8px); padding: 32px 28px;
+  max-width: 400px; width: 100%; text-align: center;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+  animation: slide-up 0.22s ease;
+}
+@keyframes slide-up { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-img-wrap { margin: 0 auto 20px; width: 96px; height: 96px; }
+.modal-img-wrap img { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 3px solid hsl(var(--border)); }
+.modal h3 { font-size: 1.2rem; margin-bottom: 6px; }
+.modal-cat-label {
+  display: inline-block; margin-bottom: 18px;
+  font-size: 0.8rem; font-weight: 600; color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.08); padding: 3px 12px; border-radius: 999px;
+}
+.modal p { color: hsl(var(--muted-foreground)); font-size: 0.9rem; line-height: 1.55; margin-bottom: 24px; }
+.modal-actions { display: flex; gap: 10px; }
+.modal-actions .btn { flex: 1; }
+.modal-error {
+  display: none; background: hsl(var(--destructive) / 0.08);
+  color: hsl(var(--destructive)); padding: 9px 14px; border-radius: var(--radius);
+  font-size: 0.84rem; margin-bottom: 16px;
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="brand">
+      <div class="brand-mark">NC</div>
+      NACOS OAU
+    </a>
+    <div id="user-bar-slot"></div>
+  </div>
+</nav>
+
+<!-- Auth gate -->
+<div id="gate" style="display:none;">
+  <div class="gate">
+    <div class="gate-card">
+      <div class="gate-logo">NC</div>
+      <h1>Sign in to vote</h1>
+      <p>Use your <strong>school email</strong> to verify you're an eligible NACOS OAU student.</p>
+      <button class="google-btn" id="google-btn">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+      <p class="gate-note">Only <strong>@<?= ALLOWED_EMAIL_DOMAIN ?></strong> accounts are accepted.</p>
+      <div class="gate-error" id="gate-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div id="loading-screen" style="display:none;">
+  <div class="loading-screen">
+    <div class="spinner"></div>
+    <span>Loading your ballot…</span>
+  </div>
+</div>
+
+<!-- Voting UI -->
+<div id="voting-ui" style="display:none;">
+  <div class="voting-header">
+    <div class="voting-header-inner">
+      <h1>Cast your votes</h1>
+      <p>Choose one nominee per category. Every vote is final and confirmed before locking.</p>
+      <div class="progress-row" id="progress-row"></div>
+    </div>
+  </div>
+  <div class="voting-body" id="voting-body"></div>
+</div>
+
+<!-- Confirmation modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-img-wrap"><img id="modal-photo" src="" alt="" /></div>
+    <h3 id="modal-name"></h3>
+    <span class="modal-cat-label" id="modal-cat-label"></span>
+    <p>Confirming this vote is <strong>permanent</strong> — you cannot change it. Are you sure?</p>
+    <div class="modal-error" id="modal-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="modal-cancel">Go back</button>
+      <button class="btn btn-primary" id="modal-confirm">Yes, confirm vote</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script type="module">
+  import { auth, signInWithGoogle, signOut, getCurrentUser, apiFetch } from "./auth.js";
+
+  let votedMap  = {};
+  let pendingVote = null;
+
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg; t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 3000);
+  }
+
+  function setView(view) {
+    document.getElementById("gate").style.display          = view === "gate"    ? "block"  : "none";
+    document.getElementById("loading-screen").style.display = view === "loading" ? "flex"   : "none";
+    document.getElementById("voting-ui").style.display      = view === "voting"  ? "block"  : "none";
+  }
+
+  async function init() {
+    setView("loading");
+    const user = await getCurrentUser();
+
+    if (!user) { setView("gate"); return; }
+
+    const email = user.email || "";
+    if (!email.endsWith("@" + ALLOWED_EMAIL_DOMAIN)) {
+      await signOut();
+      setView("gate");
+      showError(`Only @${ALLOWED_EMAIL_DOMAIN} accounts can vote.`);
+      return;
+    }
+
+    // Show user in nav
+    const initials = email.slice(0, 2).toUpperCase();
+    document.getElementById("user-bar-slot").innerHTML = `
+      <div class="user-bar">
+        <div class="user-avatar">${initials}</div>
+        <span class="user-email">${email}</span>
+        <button class="btn btn-ghost btn-sm" id="signout-btn">Sign out</button>
+      </div>`;
+    document.getElementById("signout-btn").addEventListener("click", signOut);
+
+    // Load which categories this user has already voted in
+    try {
+      const { votes } = await apiFetch("/api/my-votes");
+      votes.forEach(v => { votedMap[v.categoryId] = v.nomineeId; });
+    } catch (e) {
+      console.error("Failed to load my votes:", e);
+    }
+
+    setView("voting");
+    renderVotingUI();
+  }
+
+  function showError(msg) {
+    const el = document.getElementById("gate-error");
+    el.textContent = msg; el.style.display = "block";
+  }
+
+  function renderVotingUI() {
+    renderProgress();
+    renderCategories();
+  }
+
+  function renderProgress() {
+    document.getElementById("progress-row").innerHTML = CATEGORIES.map(cat => {
+      const done = !!votedMap[cat.id];
+      return `<span class="progress-chip ${done ? "done" : ""}">
+        ${done ? "✓" : "○"} ${cat.label}
+      </span>`;
+    }).join("");
+  }
+
+  function renderCategories() {
+    document.getElementById("voting-body").innerHTML = CATEGORIES.map(cat => {
+      const myVote = votedMap[cat.id];
+      return `
+        <div class="cat-section">
+          <div class="cat-title-row">
+            <div class="cat-title">
+              <div class="cat-icon-badge">${cat.icon || "🏆"}</div>
+              <h2>${cat.label}</h2>
+            </div>
+            ${myVote
+              ? '<span class="badge badge-green">✓ Voted</span>'
+              : '<span class="badge badge-warn">Pending</span>'}
+          </div>
+          <div class="nominee-grid">
+            ${cat.nominees.map(nom => {
+              const isMyVote  = myVote === nom.id;
+              const otherVote = myVote && !isMyVote;
+              return `
+                <button class="nominee-card ${isMyVote ? "voted-for" : ""} ${otherVote ? "other-voted" : ""}"
+                        data-cat="${cat.id}" data-nom="${nom.id}"
+                        ${myVote ? "disabled" : ""}>
+                  <span class="voted-banner">YOUR VOTE</span>
+                  <img src="${nom.photo}" alt="${nom.name}" loading="lazy"
+                       onerror="this.src='https://placehold.co/400x400/e8f5e9/1b5e20?text=?'" />
+                  <div class="nominee-info">
+                    <div class="nominee-name">${nom.name}</div>
+                    <div class="nominee-tap">${isMyVote ? "✓ Your vote" : myVote ? "—" : "Tap to vote"}</div>
+                  </div>
+                </button>`;
+            }).join("")}
+          </div>
+        </div>`;
+    }).join("");
+
+    document.querySelectorAll(".nominee-card:not(:disabled)").forEach(btn => {
+      btn.addEventListener("click", () => openModal(btn.dataset.cat, btn.dataset.nom));
+    });
+  }
+
+  function openModal(categoryId, nomineeId) {
+    const cat = CATEGORIES.find(c => c.id === categoryId);
+    const nom = cat.nominees.find(n => n.id === nomineeId);
+    pendingVote = { categoryId, categoryLabel: cat.label, nomineeId, nomineeName: nom.name, photo: nom.photo };
+    document.getElementById("modal-photo").src = nom.photo;
+    document.getElementById("modal-name").textContent = nom.name;
+    document.getElementById("modal-cat-label").textContent = cat.label;
+    document.getElementById("modal-error").style.display = "none";
+    document.getElementById("modal-confirm").disabled = false;
+    document.getElementById("modal-confirm").textContent = "Yes, confirm vote";
+    document.getElementById("modal-overlay").style.display = "flex";
+  }
+
+  function closeModal() {
+    document.getElementById("modal-overlay").classList.remove("open");
+    pendingVote = null;
+  }
+
+  async function confirmVote() {
+    if (!pendingVote) return;
+    const btn = document.getElementById("modal-confirm");
+    btn.disabled = true; btn.textContent = "Submitting…";
+
+    try {
+      await apiFetch("/api/vote", {
+        method: "POST",
+        body: JSON.stringify({ categoryId: pendingVote.categoryId, nomineeId: pendingVote.nomineeId }),
+      });
+      votedMap[pendingVote.categoryId] = pendingVote.nomineeId;
+      closeModal();
+      renderVotingUI();
+      showToast(`✓ Vote locked in — ${pendingVote.categoryLabel}`);
+    } catch (e) {
+      const errEl = document.getElementById("modal-error");
+      errEl.style.display = "block";
+      if (e.error === "ALREADY_VOTED") {
+        errEl.textContent = "You've already voted in this category.";
+        closeModal(); renderVotingUI();
+      } else if (e.status === 401) {
+        errEl.textContent = "Session expired. Please sign out and back in.";
+        btn.disabled = false; btn.textContent = "Yes, confirm vote";
+      } else {
+        errEl.textContent = e.message || "Something went wrong. Please try again.";
+        btn.disabled = false; btn.textContent = "Yes, confirm vote";
+      }
+      console.error(e);
+    }
+  }
+
+  // Event listeners
+  document.getElementById("google-btn").addEventListener("click", async () => {
+    const btn = document.getElementById("google-btn");
+    btn.disabled = true; btn.textContent = "Opening Google…";
+    try {
+      await signInWithGoogle();
+      // onAuthStateChanged in getCurrentUser will re-fire → init() handles the rest
+      init();
+    } catch (e) {
+      showError("Sign-in failed. Make sure popups are allowed and try again.");
+      btn.disabled = false;
+      btn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20">…</svg> Continue with Google`;
+    }
+  });
+
+  document.getElementById("modal-cancel").addEventListener("click", closeModal);
+  document.getElementById("modal-confirm").addEventListener("click", confirmVote);
+  document.getElementById("modal-overlay").addEventListener("click", e => {
+    if (e.target.id === "modal-overlay") closeModal();
+  });
+
+  init();
+</script>
+</body>
+</html>

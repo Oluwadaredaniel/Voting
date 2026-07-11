@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — NACOS OAU Voting</title>
+<link rel="stylesheet" href="theme.css" />
+<style>
+.gate-wrap {
+  min-height: 80vh; display: flex; align-items: center;
+  justify-content: center; padding: 24px;
+  background: radial-gradient(ellipse 70% 50% at 50% 0%, hsl(var(--mint)), transparent);
+}
+.gate-card {
+  background: hsl(var(--card)); border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) + 10px); padding: 40px 36px;
+  max-width: 400px; width: 100%;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.06); text-align: center;
+}
+.gate-logo {
+  width: 48px; height: 48px; border-radius: 14px; margin: 0 auto 20px;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-dark)));
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-family: var(--font-display); font-weight: 800; font-size: 1rem;
+}
+.gate-card h1 { font-size: 1.5rem; margin-bottom: 8px; }
+.gate-card p  { color: hsl(var(--muted-foreground)); font-size: 0.88rem; margin-bottom: 24px; }
+.pin-row { display: flex; gap: 8px; }
+.pin-row input { flex: 1; }
+.pin-error {
+  margin-top: 12px; padding: 9px 14px; border-radius: var(--radius);
+  background: hsl(var(--destructive) / 0.08); color: hsl(var(--destructive));
+  font-size: 0.84rem; display: none;
+}
+
+/* Layout */
+.admin-layout { display: flex; min-height: calc(100vh - 65px); }
+.sidebar {
+  width: 220px; flex-shrink: 0;
+  border-right: 1px solid hsl(var(--border));
+  padding: 20px 12px; background: hsl(var(--card));
+  position: sticky; top: 65px; height: calc(100vh - 65px); overflow-y: auto;
+}
+.sidebar-label {
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: hsl(var(--muted-foreground));
+  padding: 0 10px; margin-bottom: 6px; margin-top: 20px;
+}
+.sidebar-label:first-child { margin-top: 0; }
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 10px; border-radius: var(--radius);
+  font-size: 0.88rem; font-weight: 500; cursor: pointer;
+  color: hsl(var(--muted-foreground));
+  transition: all 0.14s ease; border: none; background: none;
+  width: 100%; text-align: left;
+}
+.nav-item:hover  { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+.nav-item.active { background: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); font-weight: 600; }
+
+.admin-content { flex: 1; padding: 36px 32px; min-width: 0; overflow-x: hidden; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+.page-head { margin-bottom: 28px; }
+.page-head h2 { font-size: 1.4rem; margin-bottom: 4px; }
+.page-head p  { color: hsl(var(--muted-foreground)); font-size: 0.88rem; }
+
+/* Stats */
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 28px; }
+.stat-card {
+  background: hsl(var(--card)); border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) + 4px); padding: 18px 20px;
+}
+.stat-label { font-size: 0.72rem; font-weight: 700; color: hsl(var(--muted-foreground)); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+.stat-val   { font-family: var(--font-display); font-size: 2rem; font-weight: 800; line-height: 1; }
+
+/* Results */
+.results-section { margin-bottom: 36px; }
+.results-section h3 { font-size: 1rem; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid hsl(var(--border)); }
+.result-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid hsl(var(--border) / 0.5); }
+.result-rank { font-size: 0.78rem; font-weight: 700; color: hsl(var(--muted-foreground)); width: 24px; flex-shrink: 0; }
+.result-photo { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: hsl(var(--muted)); flex-shrink: 0; }
+.result-bar-col { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.result-name { font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bar-track { height: 7px; background: hsl(var(--border)); border-radius: 999px; overflow: hidden; }
+.bar-fill  { height: 100%; background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary-dark))); border-radius: 999px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); width: 0; }
+.result-count { font-size: 0.85rem; font-weight: 700; min-width: 64px; text-align: right; }
+.winner-badge { font-size: 0.65rem; font-weight: 700; background: hsl(var(--warning)); color: white; padding: 2px 8px; border-radius: 999px; }
+
+/* Audit */
+.audit-controls { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.audit-controls input { max-width: 260px; }
+.audit-table-wrap { overflow-x: auto; border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) + 2px); }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+thead  { background: hsl(var(--muted)); }
+th { padding: 10px 14px; text-align: left; font-weight: 700; font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+td { padding: 10px 14px; border-top: 1px solid hsl(var(--border) / 0.6); }
+tr:hover td { background: hsl(var(--muted) / 0.5); }
+.td-email { font-family: monospace; font-size: 0.8rem; color: hsl(var(--muted-foreground)); }
+.td-time  { white-space: nowrap; color: hsl(var(--muted-foreground)); font-size: 0.8rem; }
+
+/* Nominees */
+.cat-mgmt-block { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) + 6px); overflow: hidden; margin-bottom: 18px; }
+.cat-mgmt-head  { padding: 14px 20px; background: hsl(var(--muted)); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid hsl(var(--border)); }
+.cat-mgmt-head h3 { font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
+.nominee-row { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid hsl(var(--border) / 0.5); }
+.nominee-row:last-of-type { border-bottom: none; }
+.nominee-row img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: hsl(var(--muted)); flex-shrink: 0; }
+.nom-info { flex: 1; min-width: 0; }
+.nom-name { font-weight: 600; font-size: 0.9rem; }
+.nom-id   { font-size: 0.72rem; color: hsl(var(--muted-foreground)); font-family: monospace; }
+.nom-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.add-row { padding: 14px 20px; background: hsl(var(--mint) / 0.6); border-top: 1px dashed hsl(var(--border)); display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+.add-row .fg { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+.add-row label { font-size: 0.75rem; font-weight: 600; color: hsl(var(--muted-foreground)); }
+.add-row input { padding: 8px 10px; font-size: 0.85rem; }
+.img-tip { background: hsl(var(--primary) / 0.06); border: 1px solid hsl(var(--primary) / 0.2); border-radius: calc(var(--radius) + 2px); padding: 14px 18px; margin-bottom: 22px; font-size: 0.87rem; line-height: 1.6; }
+.img-tip strong { color: hsl(var(--primary)); }
+.img-tip a { color: hsl(var(--primary)); text-decoration: underline; }
+
+/* Integrity */
+.ac-card { border-radius: calc(var(--radius) + 6px); padding: 24px; margin-bottom: 18px; }
+.ac-card-warn { background: hsl(var(--warning) / 0.06); border: 1.5px solid hsl(var(--warning) / 0.3); }
+.ac-card-ok   { background: hsl(var(--success) / 0.04); border: 1.5px solid hsl(var(--success) / 0.3); }
+.ac-card h3 { font-size: 1rem; margin-bottom: 14px; }
+.ac-card h3.warn { color: hsl(var(--warning)); }
+.ac-card h3.ok   { color: hsl(var(--success)); }
+.ac-list { display: flex; flex-direction: column; gap: 14px; }
+.ac-item { display: flex; gap: 12px; align-items: flex-start; font-size: 0.88rem; line-height: 1.6; }
+.ac-icon { flex-shrink: 0; width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; margin-top: 1px; }
+.ac-icon-warn { background: hsl(var(--warning) / 0.15); color: hsl(var(--warning)); }
+.ac-icon-ok   { background: hsl(var(--success) / 0.15); color: hsl(var(--success)); }
+
+/* Loading */
+.spinner { display: inline-block; width: 18px; height: 18px; border-radius: 50%; border: 2px solid hsl(var(--border)); border-top-color: hsl(var(--primary)); animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 640px) {
+  .sidebar { display: none; }
+  .admin-content { padding: 24px 16px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="brand"><div class="brand-mark">NC</div> NACOS OAU · Admin</div>
+    <a href="index.html" class="btn btn-ghost btn-sm">← Site</a>
+  </div>
+</nav>
+
+<!-- Gate -->
+<div id="gate-wrap" class="gate-wrap">
+  <div class="gate-card">
+    <div class="gate-logo">NC</div>
+    <h1>Organiser access</h1>
+    <p>Enter your passcode to view results and manage the voting session.</p>
+    <div class="pin-row">
+      <input type="password" id="pin-input" placeholder="Passcode" autocomplete="current-password" />
+      <button class="btn btn-primary" id="pin-btn">Enter</button>
+    </div>
+    <div class="pin-error" id="pin-error">Incorrect passcode.</div>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div id="admin-app" style="display:none;">
+  <div class="admin-layout">
+    <nav class="sidebar">
+      <div class="sidebar-label">Live</div>
+      <button class="nav-item active" data-tab="results"   onclick="switchTab('results')">  <span>📊</span> Results  </button>
+      <button class="nav-item"        data-tab="audit"     onclick="switchTab('audit')">    <span>🔍</span> Audit Log</button>
+      <div class="sidebar-label">Setup</div>
+      <button class="nav-item"        data-tab="nominees"  onclick="switchTab('nominees')"> <span>👥</span> Nominees </button>
+      <button class="nav-item"        data-tab="integrity" onclick="switchTab('integrity')"><span>🛡️</span> Integrity</button>
+    </nav>
+
+    <div class="admin-content">
+
+      <!-- RESULTS -->
+      <div class="tab-pane active" id="tab-results">
+        <div class="page-head">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div><h2>Live Results</h2><p id="results-meta">—</p></div>
+            <button class="btn btn-outline btn-sm" onclick="loadResults()">↻ Refresh</button>
+          </div>
+        </div>
+        <div class="stats-row" id="stats-row"></div>
+        <div id="results-body"><span class="spinner"></span> Loading…</div>
+      </div>
+
+      <!-- AUDIT -->
+      <div class="tab-pane" id="tab-audit">
+        <div class="page-head">
+          <h2>Full Audit Log</h2>
+          <p>Every vote ever cast, tied to a verified school email. Immutable.</p>
+        </div>
+        <div class="audit-controls">
+          <input type="text" id="audit-search" placeholder="Search by email or nominee…" oninput="filterAudit()" />
+          <button class="btn btn-outline btn-sm" onclick="loadAudit()">↻ Refresh</button>
+          <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+        </div>
+        <div class="audit-table-wrap">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Voter email</th><th>Category</th><th>Nominee</th><th>Time</th></tr>
+            </thead>
+            <tbody id="audit-tbody">
+              <tr><td colspan="5" style="text-align:center;padding:24px;color:hsl(var(--muted-foreground))"><span class="spinner"></span> Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p id="audit-count" style="font-size:0.8rem;color:hsl(var(--muted-foreground));margin-top:10px;"></p>
+      </div>
+
+      <!-- NOMINEES -->
+      <div class="tab-pane" id="tab-nominees">
+        <div class="page-head">
+          <h2>Manage Nominees</h2>
+          <p>Add or remove nominees per category. Export the updated <code>config.js</code> and redeploy when done.</p>
+        </div>
+        <div class="img-tip">
+          📸 <strong>Image hosting:</strong> Use <a href="https://cloudinary.com" target="_blank">Cloudinary</a> (free) — sign up, drag-and-drop photo, copy the URL. Or upload to <strong>MongoDB Atlas → App Services → Static Hosting</strong>. Paste the URL in the photo field below. <strong>Square photos (1:1 ratio) look best.</strong>
+        </div>
+        <div id="nominee-mgmt"></div>
+        <div style="margin-top:20px;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-outline" onclick="resetNominees()">↩ Reset to current config</button>
+          <button class="btn btn-primary" onclick="exportConfig()">⬇ Export config.js</button>
+        </div>
+      </div>
+
+      <!-- INTEGRITY -->
+      <div class="tab-pane" id="tab-integrity">
+        <div class="page-head">
+          <h2>Anti-Cheat & Integrity</h2>
+          <p>How the system prevents fraud — including by you, the organiser.</p>
+        </div>
+        <div class="ac-card ac-card-warn">
+          <h3 class="warn">⚠️ What the admin cannot do</h3>
+          <div class="ac-list">
+            <div class="ac-item">
+              <div class="ac-icon ac-icon-warn">🚫</div>
+              <div><strong>Cannot vote multiple times.</strong> Your school email is subject to the same MongoDB unique index as every other voter. A second vote in any category is rejected at the database level — not just the UI.</div>
+            </div>
+            <div class="ac-item">
+              <div class="ac-icon ac-icon-warn">🚫</div>
+              <div><strong>Cannot forge votes for other students.</strong> Every vote is tied to a Firebase-verified UID. The server checks the token on every request — there's no way to submit a vote as someone else through this app.</div>
+            </div>
+            <div class="ac-item">
+              <div class="ac-icon ac-icon-warn">🚫</div>
+              <div><strong>Cannot delete or edit votes.</strong> The Express API has no DELETE or UPDATE route for votes. The only write operation is INSERT, and the unique index makes that idempotent per category.</div>
+            </div>
+            <div class="ac-item">
+              <div class="ac-icon ac-icon-warn">🚫</div>
+              <div><strong>Cannot see live results during voting without this passcode.</strong> The results endpoint requires the <code>x-admin-passcode</code> header. Students voting never see any counts.</div>
+            </div>
+          </div>
+        </div>
+        <div class="ac-card ac-card-ok">
+          <h3 class="ok">✅ The paper trail</h3>
+          <div class="ac-list">
+            <div class="ac-item">
+              <div class="ac-icon ac-icon-ok">✓</div>
+              <div>Every vote row stores <code>voterId</code> (Firebase UID), <code>voterEmail</code>, <code>categoryId</code>, <code>nomineeId</code>, and <code>createdAt</code>. Export the full log as CSV from the Audit Log tab at any time.</div>
+            </div>
+            <div class="ac-item">
+              <div class="ac-icon ac-icon-ok">✓</div>
+              <div>MongoDB Atlas logs all direct database access under <strong>Atlas → Activity Feed</strong>. Any tampering outside the app is traceable.</div>
+            </div>
+            <div class="ac-item">
+              <div class="ac-icon ac-icon-ok">✓</div>
+              <div>For maximum trust, give a neutral third party (e.g. a faculty adviser) read-only Atlas access so they can independently verify counts after voting closes.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /admin-content -->
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script>
+  /* ── Gate ── */
+  let activePasscode = "";
+  document.getElementById("pin-btn").addEventListener("click", tryPin);
+  document.getElementById("pin-input").addEventListener("keydown", e => { if (e.key === "Enter") tryPin(); });
+
+  async function tryPin() {
+    const pin = document.getElementById("pin-input").value.trim();
+    if (!pin) return;
+
+    document.getElementById("pin-btn").disabled = true;
+    document.getElementById("pin-btn").innerHTML = `<span class="spinner"></span>`;
+
+    try {
+      // Verify passcode by attempting to fetch results
+      const res = await fetch(API_BASE + "/api/results", {
+        headers: { "x-admin-passcode": pin }
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        activePasscode = pin;
+        document.getElementById("gate-wrap").style.display = "none";
+        document.getElementById("admin-app").style.display = "block";
+        // Pass data to loadResults to avoid double fetch
+        renderResults(data);
+        loadAudit(); renderNomineeManager();
+      } else {
+        throw new Error(data.error || "Incorrect passcode.");
+      }
+    } catch (e) {
+      document.getElementById("pin-error").textContent = e.message || "Incorrect passcode.";
+      document.getElementById("pin-error").style.display = "block";
+    } finally {
+      document.getElementById("pin-btn").disabled = false;
+      document.getElementById("pin-btn").textContent = "Enter";
+    }
+  }
+
+  /* ── Tabs ── */
+  function switchTab(tab) {
+    document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+    document.getElementById("tab-" + tab).classList.add("active");
+    document.querySelector(`[data-tab="${tab}"]`).classList.add("active");
+  }
+
+  /* ── Toast ── */
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg; t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2800);
+  }
+
+  /* ── Admin fetch ── */
+  async function adminFetch(path) {
+    const res  = await fetch(API_BASE + path, { headers: { "x-admin-passcode": activePasscode } });
+    const data = await res.json();
+    if (!res.ok) throw data;
+    return data;
+  }
+
+  /* ── Results ── */
+  async function loadResults() {
+    document.getElementById("results-body").innerHTML = `<span class="spinner"></span> Loading…`;
+    try {
+      const data = await adminFetch("/api/results");
+      renderResults(data);
+    } catch (e) {
+      document.getElementById("results-body").innerHTML = `<p style="color:hsl(var(--destructive))">${e.error || "Failed to load results."}</p>`;
+    }
+  }
+
+  function renderResults({ tally, totalVotes, uniqueVoters }) {
+    const now = new Date().toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" });
+    document.getElementById("results-meta").textContent = `Last refreshed ${now}`;
+    document.getElementById("stats-row").innerHTML = `
+      <div class="stat-card"><div class="stat-label">Total votes</div><div class="stat-val">${totalVotes}</div></div>
+      <div class="stat-card"><div class="stat-label">Unique voters</div><div class="stat-val">${uniqueVoters}</div></div>
+      <div class="stat-card"><div class="stat-label">Categories</div><div class="stat-val">${CATEGORIES.length}</div></div>`;
+
+    let html = "";
+    CATEGORIES.forEach(cat => {
+      const rows = cat.nominees.map(nom => {
+        const match = tally.find(t => t._id.categoryId === cat.id && t._id.nomineeId === nom.id);
+        return { ...nom, count: match ? match.count : 0 };
+      }).sort((a, b) => b.count - a.count);
+      const max = rows[0]?.count || 1;
+      html += `<div class="results-section"><h3>${cat.icon || "🏆"} ${cat.label}</h3>`;
+      rows.forEach((nom, i) => {
+        const pct = max > 0 ? (nom.count / max) * 100 : 0;
+        html += `<div class="result-row">
+          <div class="result-rank">#${i + 1}</div>
+          <img class="result-photo" src="${nom.photo}" alt="${nom.name}" onerror="this.src='https://placehold.co/38x38'" />
+          <div class="result-bar-col">
+            <div class="result-name">
+              ${nom.name}
+              ${i === 0 && nom.count > 0 ? '<span class="winner-badge">LEADING</span>' : ""}
+            </div>
+            <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+          </div>
+          <div class="result-count">${nom.count} vote${nom.count !== 1 ? "s" : ""}</div>
+        </div>`;
+      });
+      html += `</div>`;
+    });
+    document.getElementById("results-body").innerHTML = html;
+  }
+
+  /* ── Audit ── */
+  let allRows = [];
+  async function loadAudit() {
+    document.getElementById("audit-tbody").innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px"><span class="spinner"></span> Loading…</td></tr>`;
+    try {
+      const { votes } = await adminFetch("/api/audit");
+      allRows = votes || [];
+      renderAuditTable(allRows);
+    } catch (e) {
+      document.getElementById("audit-tbody").innerHTML = `<tr><td colspan="5" style="color:hsl(var(--destructive));padding:14px">${e.error || "Failed to load."}</td></tr>`;
+    }
+  }
+
+  function renderAuditTable(rows) {
+    if (!rows.length) {
+      document.getElementById("audit-tbody").innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:hsl(var(--muted-foreground))">No votes yet.</td></tr>`;
+      document.getElementById("audit-count").textContent = "";
+      return;
+    }
+    document.getElementById("audit-tbody").innerHTML = rows.map((r, i) => {
+      const cat = CATEGORIES.find(c => c.id === r.categoryId);
+      const nom = cat?.nominees.find(n => n.id === r.nomineeId);
+      const time = new Date(r.createdAt).toLocaleString("en-NG", { dateStyle: "short", timeStyle: "short" });
+      return `<tr>
+        <td>${i + 1}</td>
+        <td class="td-email">${r.voterEmail || "—"}</td>
+        <td>${cat?.label || r.categoryId}</td>
+        <td>${nom?.name  || r.nomineeId}</td>
+        <td class="td-time">${time}</td>
+      </tr>`;
+    }).join("");
+    document.getElementById("audit-count").textContent = `${rows.length} vote${rows.length !== 1 ? "s" : ""} shown`;
+  }
+
+  function filterAudit() {
+    const q = document.getElementById("audit-search").value.toLowerCase();
+    if (!q) { renderAuditTable(allRows); return; }
+    renderAuditTable(allRows.filter(r => {
+      const cat = CATEGORIES.find(c => c.id === r.categoryId);
+      const nom = cat?.nominees.find(n => n.id === r.nomineeId);
+      return (r.voterEmail || "").toLowerCase().includes(q)
+          || (cat?.label  || "").toLowerCase().includes(q)
+          || (nom?.name   || "").toLowerCase().includes(q);
+    }));
+  }
+
+  function exportCSV() {
+    if (!allRows.length) { showToast("No data to export."); return; }
+    const rows = [["#", "voterEmail", "category", "nominee", "timestamp"]];
+    allRows.forEach((r, i) => {
+      const cat = CATEGORIES.find(c => c.id === r.categoryId);
+      const nom = cat?.nominees.find(n => n.id === r.nomineeId);
+      rows.push([i + 1, r.voterEmail, cat?.label || r.categoryId, nom?.name || r.nomineeId, r.createdAt]);
+    });
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = `nacos-votes-${Date.now()}.csv`;
+    a.click();
+    showToast("CSV downloaded.");
+  }
+
+  /* ── Nominees ── */
+  let editableCats = JSON.parse(JSON.stringify(CATEGORIES));
+
+  function resetNominees() { editableCats = JSON.parse(JSON.stringify(CATEGORIES)); renderNomineeManager(); showToast("Reset."); }
+
+  function renderNomineeManager() {
+    document.getElementById("nominee-mgmt").innerHTML = editableCats.map((cat, ci) => `
+      <div class="cat-mgmt-block">
+        <div class="cat-mgmt-head">
+          <h3>${cat.icon || "🏆"} ${cat.label}</h3>
+          <span class="badge badge-mint">${cat.nominees.length} nominees</span>
+        </div>
+        ${cat.nominees.map((nom, ni) => `
+          <div class="nominee-row">
+            <img src="${nom.photo}" alt="${nom.name}" onerror="this.src='https://placehold.co/40x40'" />
+            <div class="nom-info">
+              <div class="nom-name">${nom.name}</div>
+              <div class="nom-id">${nom.id}</div>
+            </div>
+            <div class="nom-actions">
+              <button class="btn btn-ghost btn-sm" onclick="editNom(${ci},${ni})">✏️</button>
+              <button class="btn btn-destructive btn-sm" onclick="removeNom(${ci},${ni})">✕</button>
+            </div>
+          </div>`).join("")}
+        <div class="add-row">
+          <div class="fg"><label>Name</label><input type="text" id="nn-${ci}" placeholder="Full name" /></div>
+          <div class="fg" style="min-width:200px"><label>Photo URL</label><input type="text" id="np-${ci}" placeholder="https://res.cloudinary.com/…" /></div>
+          <button class="btn btn-primary btn-sm" onclick="addNom(${ci})">+ Add</button>
+        </div>
+      </div>`).join("");
+  }
+
+  function addNom(ci) {
+    const name  = document.getElementById(`nn-${ci}`).value.trim();
+    const photo = document.getElementById(`np-${ci}`).value.trim();
+    if (!name) { showToast("Enter a name first."); return; }
+    const cat = editableCats[ci];
+    cat.nominees.push({ id: `${cat.id}-n${Date.now()}`, name, photo: photo || `https://placehold.co/400x400?text=${encodeURIComponent(name)}` });
+    renderNomineeManager(); showToast(`${name} added.`);
+  }
+
+  function removeNom(ci, ni) {
+    const name = editableCats[ci].nominees[ni].name;
+    if (!confirm(`Remove "${name}"?`)) return;
+    editableCats[ci].nominees.splice(ni, 1);
+    renderNomineeManager(); showToast(`${name} removed.`);
+  }
+
+  function editNom(ci, ni) {
+    const nom   = editableCats[ci].nominees[ni];
+    const name  = prompt("Name:", nom.name);  if (name  === null) return;
+    const photo = prompt("Photo URL:", nom.photo); if (photo === null) return;
+    nom.name  = name.trim()  || nom.name;
+    nom.photo = photo.trim() || nom.photo;
+    renderNomineeManager(); showToast("Updated.");
+  }
+
+  function exportConfig() {
+    const out = `// ============================================================
+// NACOS OAU Voting — config.js  (auto-generated ${new Date().toISOString()})
+// ============================================================
+const FIREBASE_CONFIG = ${JSON.stringify(typeof FIREBASE_CONFIG !== "undefined" ? FIREBASE_CONFIG : {}, null, 2)};
+
+const API_BASE = "${typeof API_BASE !== "undefined" ? API_BASE : "https://your-app.onrender.com"}";
+const ALLOWED_EMAIL_DOMAIN = "${typeof ALLOWED_EMAIL_DOMAIN !== "undefined" ? ALLOWED_EMAIL_DOMAIN : "student.oauife.edu.ng"}";
+
+const CATEGORIES = ${JSON.stringify(editableCats, null, 2)};
+`;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([out], { type: "text/javascript" }));
+    a.download = "config.js"; a.click();
+    showToast("config.js downloaded — replace file and redeploy.");
+  }
+</script>
+</body>
+</html>

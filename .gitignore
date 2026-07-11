@@ -1,0 +1,5 @@
+node_modules/
+.env
+.firebase/
+dist/
+public/config.js (optional, but keep YOUR_ values in template)

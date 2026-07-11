@@ -13,8 +13,8 @@ const FIREBASE_CONFIG = {
   
   // Your Express API base URL
   // Local dev:  http://localhost:3000
-  // Production: https://your-app.onrender.com
-  const API_BASE = "https://your-app.onrender.com";
+  // Production: https://voting-r4rj.onrender.com
+  const API_BASE = "https://voting-r4rj.onrender.com";
   
   // Allowed school email domain (shown in error messages only — real enforcement is server-side)
   const ALLOWED_EMAIL_DOMAIN = "student.oauife.edu.ng";

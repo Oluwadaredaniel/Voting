@@ -5,13 +5,26 @@ import { MongoClient, ServerApiVersion } from "mongodb";
 import admin from "firebase-admin";
 
 // ─── Firebase Admin init ───────────────────────────────────────────────────
+import fs from "fs";
+import { join } from "path";
+
 let serviceAccount;
+const secretPath = join(process.cwd(), "service-account.json");
+
+if (fs.existsSync(secretPath)) {
+  try {
+    const raw = fs.readFileSync(secretPath, "utf8");
+    serviceAccount = JSON.parse(raw);
+    console.log("✅ Firebase initialized via Secret File");
+  } catch (e) {
+    console.error("❌ Failed to parse service-account.json:", e.message);
+  }
+}
 
 const cleanKey = (key) => {
   if (typeof key !== 'string') return key;
   let cleaned = key.trim().replace(/^['"]|['"]$/g, '');
 
-  // If it's a PEM key, normalize it by stripping all internal whitespace
   if (cleaned.includes("-----BEGIN PRIVATE KEY-----")) {
     const header = "-----BEGIN PRIVATE KEY-----";
     const footer = "-----END PRIVATE KEY-----";
@@ -27,34 +40,20 @@ const cleanKey = (key) => {
   return cleaned.replace(/\\n/g, '\n').replace(/\\v/g, '\n');
 };
 
-// 1. Try JSON blob first (Most reliable for Render)
-if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+if (!serviceAccount && process.env.FIREBASE_SERVICE_ACCOUNT) {
   try {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
     serviceAccount = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    console.log("⚠️ Firebase fallback to Env Var");
   } catch (e) {
     console.error("❌ Firebase Init: Failed to parse FIREBASE_SERVICE_ACCOUNT JSON.");
   }
 }
 
-// 2. Fallback to individual variables
-if (!serviceAccount && process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY) {
-  serviceAccount = {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY
-  };
-}
-
 if (serviceAccount) {
   const key = serviceAccount.private_key || serviceAccount.privateKey;
   if (key) {
-    console.log(`🔑 Private key found (Length: ${key.length})`);
     serviceAccount.privateKey = cleanKey(key);
-    // Final check for DER parsing: ensure key starts and ends correctly
-    if (!serviceAccount.privateKey.includes("-----BEGIN PRIVATE KEY-----")) {
-      console.error("❌ CRITICAL: Private key missing PEM header.");
-    }
   }
   serviceAccount.projectId = serviceAccount.project_id || serviceAccount.projectId;
   serviceAccount.clientEmail = serviceAccount.client_email || serviceAccount.clientEmail;

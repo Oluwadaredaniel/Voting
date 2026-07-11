@@ -30,9 +30,9 @@ const FIREBASE_CONFIG = {
       label: "Best Dressed",
       icon: "👗",
       nominees: [
-        { id: "nom-1", name: "Nominee One",   photo: "https://placehold.co/400x400/e8f5e9/1b5e20?text=1" },
-        { id: "nom-2", name: "Nominee Two",   photo: "https://placehold.co/400x400/e8f5e9/1b5e20?text=2" },
-        { id: "nom-3", name: "Nominee Three", photo: "https://placehold.co/400x400/e8f5e9/1b5e20?text=3" },
+        { id: "nom-1", name: "Nominee A",   photo: "https://ui-avatars.com/api/?name=Nominee+A&background=e8f5e9&color=0e8c2c&size=400" },
+        { id: "nom-2", name: "Nominee B",   photo: "https://ui-avatars.com/api/?name=Nominee+B&background=e8f5e9&color=0e8c2c&size=400" },
+        { id: "nom-3", name: "Nominee C",   photo: "https://ui-avatars.com/api/?name=Nominee+C&background=e8f5e9&color=0e8c2c&size=400" },
       ],
     },
     {
@@ -40,18 +40,8 @@ const FIREBASE_CONFIG = {
       label: "Most Influential",
       icon: "⭐",
       nominees: [
-        { id: "nom-4", name: "Nominee Four",  photo: "https://placehold.co/400x400/e8f5e9/1b5e20?text=4" },
-        { id: "nom-5", name: "Nominee Five",  photo: "https://placehold.co/400x400/e8f5e9/1b5e20?text=5" },
-        { id: "nom-6", name: "Nominee Six",   photo: "https://placehold.co/400x400/e8f5e9/1b5e20?text=6" },
-      ],
-    },
-    {
-      id: "rising-star",
-      label: "Rising Star",
-      icon: "🚀",
-      nominees: [
-        { id: "nom-7", name: "Nominee Seven", photo: "https://placehold.co/400x400/e8f5e9/1b5e20?text=7" },
-        { id: "nom-8", name: "Nominee Eight", photo: "https://placehold.co/400x400/e8f5e9/1b5e20?text=8" },
+        { id: "nom-4", name: "Nominee D",  photo: "https://ui-avatars.com/api/?name=Nominee+D&background=e8f5e9&color=0e8c2c&size=400" },
+        { id: "nom-5", name: "Nominee E",  photo: "https://ui-avatars.com/api/?name=Nominee+E&background=e8f5e9&color=0e8c2c&size=400" },
       ],
     },
   ];

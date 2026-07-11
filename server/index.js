@@ -3,11 +3,11 @@ import express from "express";
 import cors from "cors";
 import { MongoClient, ServerApiVersion } from "mongodb";
 import admin from "firebase-admin";
+import fs from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 
 // ─── Firebase Admin init ───────────────────────────────────────────────────
-import fs from "fs";
-import { join } from "path";
-
 let serviceAccount;
 const secretPath = join(process.cwd(), "service-account.json");
 
@@ -99,8 +99,6 @@ app.use(cors({
 }));
 
 // Serve frontend static files (public/ folder)
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 app.use(express.static(join(__dirname, "../public")));
 

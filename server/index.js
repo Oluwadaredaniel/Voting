@@ -5,11 +5,22 @@ import { MongoClient, ServerApiVersion } from "mongodb";
 import admin from "firebase-admin";
 
 // ─── Firebase Admin init ───────────────────────────────────────────────────
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-// Fix for Render/Env newline parsing issues
-if (serviceAccount.private_key) {
-  serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+let serviceAccount;
+try {
+  const envKey = process.env.FIREBASE_SERVICE_ACCOUNT;
+  serviceAccount = typeof envKey === 'string' ? JSON.parse(envKey) : envKey;
+
+  // Extra safety: Render often messes up newlines in the private_key PEM string
+  if (serviceAccount && serviceAccount.private_key) {
+    serviceAccount.private_key = serviceAccount.private_key
+      .replace(/\\n/g, '\n')     // Replace literal \n strings
+      .replace(/\n\n+/g, '\n');  // Remove accidental double newlines
+  }
+} catch (e) {
+  console.error("❌ CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT env var.");
+  process.exit(1);
 }
+
 admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 
 // ─── MongoDB init ──────────────────────────────────────────────────────────

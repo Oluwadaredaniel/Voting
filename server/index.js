@@ -7,22 +7,31 @@ import admin from "firebase-admin";
 // ─── Firebase Admin init ───────────────────────────────────────────────────
 let serviceAccount;
 
+const cleanKey = (key) => {
+  if (typeof key !== 'string') return key;
+  return key
+    .replace(/^['"]|['"]$/g, '') // Remove surrounding quotes
+    .replace(/\\n/g, '\n')       // Fix literal \n
+    .replace(/\\v/g, '\n')       // Fix accidental \v (vertical tab)
+    .trim();
+};
+
 if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
-  // Option A: Individual environment variables (most stable for Render)
   serviceAccount = {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+    projectId: process.env.FIREBASE_PROJECT_ID.replace(/^['"]|['"]$/g, ''),
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL.replace(/^['"]|['"]$/g, ''),
+    privateKey: cleanKey(process.env.FIREBASE_PRIVATE_KEY)
   };
 } else {
-  // Option B: Fallback to full JSON blob
   try {
     const envKey = process.env.FIREBASE_SERVICE_ACCOUNT;
     serviceAccount = typeof envKey === 'string' ? JSON.parse(envKey) : envKey;
-    if (serviceAccount && serviceAccount.private_key) {
-      serviceAccount.private_key = serviceAccount.private_key
-        .replace(/\\n/g, '\n')
-        .replace(/\n\n+/g, '\n');
+    if (serviceAccount) {
+      // Handle both camelCase and snake_case, and clean the key
+      const key = serviceAccount.private_key || serviceAccount.privateKey;
+      serviceAccount.privateKey = cleanKey(key);
+      serviceAccount.projectId = serviceAccount.project_id || serviceAccount.projectId;
+      serviceAccount.clientEmail = serviceAccount.client_email || serviceAccount.clientEmail;
     }
   } catch (e) {
     console.error("❌ CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT env var.");
@@ -30,8 +39,8 @@ if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY && proce
   }
 }
 
-if (!serviceAccount) {
-  console.error("❌ CRITICAL: No Firebase credentials provided.");
+if (!serviceAccount || !serviceAccount.privateKey) {
+  console.error("❌ CRITICAL: No valid Firebase credentials provided.");
   process.exit(1);
 }
 

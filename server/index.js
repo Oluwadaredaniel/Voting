@@ -9,11 +9,22 @@ let serviceAccount;
 
 const cleanKey = (key) => {
   if (typeof key !== 'string') return key;
-  return key
-    .replace(/^['"]|['"]$/g, '') // Remove surrounding quotes
-    .replace(/\\n/g, '\n')       // Fix literal \n
-    .replace(/\\v/g, '\n')       // Fix accidental \v
-    .trim();
+  let cleaned = key.trim().replace(/^['"]|['"]$/g, '');
+
+  // If it's a PEM key, normalize it by stripping all internal whitespace
+  if (cleaned.includes("-----BEGIN PRIVATE KEY-----")) {
+    const header = "-----BEGIN PRIVATE KEY-----";
+    const footer = "-----END PRIVATE KEY-----";
+    const parts = cleaned.split(header);
+    if (parts.length < 2) return cleaned;
+    const secondPart = parts[1].split(footer);
+    if (secondPart.length < 2) return cleaned;
+
+    const body = secondPart[0].replace(/\s+/g, '');
+    return `${header}\n${body}\n${footer}\n`;
+  }
+
+  return cleaned.replace(/\\n/g, '\n').replace(/\\v/g, '\n');
 };
 
 // 1. Try JSON blob first (Most reliable for Render)

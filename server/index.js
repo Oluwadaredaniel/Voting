@@ -6,6 +6,10 @@ import admin from "firebase-admin";
 
 // ─── Firebase Admin init ───────────────────────────────────────────────────
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+// Fix for Render/Env newline parsing issues
+if (serviceAccount.private_key) {
+  serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+}
 admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 
 // ─── MongoDB init ──────────────────────────────────────────────────────────
